@@ -46,6 +46,16 @@ class FaceDetection:
         # Retornamos la lista de rostros detectados
         return results.face_landmarks
 
+    def landmark_to_coordinates(self, image, landmark):
+        """
+        Convierte un landmark normalizado (0.0 - 1.0) a coordenadas 
+        de píxeles reales (x, y) basadas en el tamaño de la imagen.
+        """
+        alto, ancho, _ = image.shape
+        x = int(landmark.x * ancho)
+        y = int(landmark.y * alto)
+        return x, y
+
     def draw_face(self, image):
         """
         Dibuja la malla facial sobre la imagen original.

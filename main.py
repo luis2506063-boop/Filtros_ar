@@ -23,7 +23,7 @@ def main():
     print("Cargando modelo y filtros...")
     try:
         detector = FaceDetection()
-        filtro_nariz = FiltroNariz()
+        filtro_nariz = FiltroNariz(detector)
         print("Carga completada con éxito.")
     except Exception as e:
         print(f"\n[ERROR] Error al inicializar: {e}")
