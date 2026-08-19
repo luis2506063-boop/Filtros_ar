@@ -1,6 +1,7 @@
 import cv2
 from camera_manager import CameraManager
 from face_detector import FaceDetection
+from filters.filtro_nariz import FiltroNariz
 
 def main():
     print("=========================================")
@@ -18,48 +19,54 @@ def main():
         print("Por favor, asegúrate de tener una cámara web conectada y funcional.")
         return
 
-    # Inicializar el detector de caras (MediaPipe 1.0.0)
-    print("Cargando modelo de detección facial (MediaPipe Face Landmarker)...")
+    # Inicializar el detector de caras y el filtro de nariz
+    print("Cargando modelo y filtros...")
     try:
         detector = FaceDetection()
-        print("Modelo cargado con éxito.")
+        filtro_nariz = FiltroNariz()
+        print("Carga completada con éxito.")
     except Exception as e:
-        print(f"\n[ERROR] Error al inicializar el detector de rostros: {e}")
+        print(f"\n[ERROR] Error al inicializar: {e}")
         camera.release()
         return
 
-    # Crear ventana de visualización interactiva
-    window_name = "Filtros AR - Malla Facial interactiva"
+    window_name = "Filtros AR - Rostro e Interacción"
     cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
 
-    print("\nIniciando transmisión en vivo. Ajusta el tamaño de la ventana si lo deseas.")
     try:
         while True:
-            # Capturar el frame de la cámara
             frame = camera.get_frame()
             if frame is None:
-                print("[ERROR] No se pudo obtener el frame de la cámara. Saliendo...")
                 break
 
-            # Dibujar la malla facial sobre el frame actual en tiempo real
-            annotated_frame = detector.draw_face(frame)
+            # 1. Detectar los rostros primero
+            face_landmarks_list = detector.detect_faces(frame)
 
-            # Mostrar el frame procesado en la ventana
+            # 2. Dibujar la malla facial (opcional, para ver los puntos)
+            # Nota: detector.draw_face ya hace su propia detección, 
+            # para ser eficientes, mejor dibujamos sobre el frame actual si hay landmarks
+            annotated_frame = frame.copy()
+            
+            if face_landmarks_list:
+                for face_landmarks in face_landmarks_list:
+                    # Aplicar el filtro de la nariz (usa face_landmarks)
+                    annotated_frame = filtro_nariz.apply(annotated_frame, face_landmarks)
+                    
+                    # Opcional: Dibujar la malla también para referencia
+                    # (Podríamos mover el dibujo a una función separada si quisiéramos)
+                    # detector.draw_face(frame) ya existe, pero aquí lo haremos manual 
+                    # o usaremos el método para mostrar todo.
+            
             cv2.imshow(window_name, annotated_frame)
 
-            # Escuchar las teclas: esperar 1 ms.
-            # 0xFF limpia el valor del entero para quedarse con el código ASCII de la tecla
-            key = cv2.waitKey(1) & 0xFF
-            if key == ord('q') or key == 27: # 27 es la tecla ESC en ASCII
-                print("\nCerrando transmisión de video por solicitud del usuario...")
+            if cv2.waitKey(1) & 0xFF in [ord('q'), 27]:
                 break
     except Exception as e:
-        print(f"\n[ERROR] Ocurrió un error inesperado durante la ejecución: {e}")
+        print(f"\n[ERROR]: {e}")
     finally:
-        # Liberación limpia de recursos al salir
         camera.release()
         cv2.destroyAllWindows()
-        print("Cámara liberada y ventanas cerradas. ¡Aplicación finalizada correctamente!")
+        print("Aplicación finalizada.")
 
 if __name__ == "__main__":
     main()
