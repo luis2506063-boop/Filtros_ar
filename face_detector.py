@@ -2,7 +2,6 @@ import cv2
 import mediapipe as mp
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
-from mediapipe.framework.formats import landmark_pb2 # Importación clave para poder dibujar
 
 class FaceDetection:
     def __init__(self, 
@@ -29,9 +28,9 @@ class FaceDetection:
         # Inicializamos el modelo oficial de MediaPipe
         self.landmarker = vision.FaceLandmarker.create_from_options(options)
         
-        # Rescatamos las utilidades de dibujo clásicas de MediaPipe
-        self.drawing_utils = mp.solutions.drawing_utils
-        self.mp_face_mesh = mp.solutions.face_mesh
+        # Rescatamos las utilidades de dibujo de MediaPipe 1.0.0
+        self.drawing_utils = vision.drawing_utils
+        self.face_landmarks_connections = vision.FaceLandmarksConnections
 
     def detect_faces(self, image):
         """
@@ -64,20 +63,12 @@ class FaceDetection:
         # 4. Recorremos cada rostro detectado en la pantalla
         for face_landmarks in face_landmarks_list:
             
-            # TRUCO DE COMPATIBILIDAD: 
-            # La nueva API devuelve objetos puros de Python, pero las utilidades de dibujo 
-            # esperan el formato antiguo (Protobuf). Aquí hacemos la traducción manual:
-            face_landmarks_proto = landmark_pb2.NormalizedLandmarkList()
-            face_landmarks_proto.landmark.extend([
-                landmark_pb2.NormalizedLandmark(x=landmark.x, y=landmark.y, z=landmark.z) 
-                for landmark in face_landmarks
-            ])
-            
-            # 5. Dibujamos la malla facial (tesselation) sobre la copia de la imagen
+            # En la nueva API de MediaPipe 1.0.0, la función draw_landmarks acepta 
+            # directamente la lista de NormalizedLandmarks sin traducción a Protobuf.
             self.drawing_utils.draw_landmarks(
                 image=annotated_image,
-                landmark_list=face_landmarks_proto,
-                connections=self.mp_face_mesh.FACEMESH_TESSELATION,
+                landmark_list=face_landmarks,
+                connections=self.face_landmarks_connections.FACE_LANDMARKS_TESSELATION,
                 landmark_drawing_spec=None, 
                 connection_drawing_spec=self.drawing_utils.DrawingSpec(color=(0, 255, 0), thickness=1, circle_radius=1)
             )
